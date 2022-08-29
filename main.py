@@ -30,6 +30,21 @@ def download_image(url, directory='images/'):
         file.write(response.content)
 
 
+def download_comments(id):
+    url = f'https://tululu.org/b{id}/'
+    response = requests.get(url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, 'lxml')
+    comments_tags = soup.find_all('div', class_='texts')
+    comments_texts = []
+    if comments_tags == []:
+        return ''
+    for comment_tag in comments_tags:
+        comment_text_tag = comment_tag.find('span', class_='black')
+        comments_texts.append(comment_text_tag.text)
+    return comments_texts
+
+
 
 def get_book_info(id):
     url = f'https://tululu.org/b{id}/'
@@ -53,8 +68,11 @@ if __name__ == '__main__':
             response.raise_for_status()
             check_for_redirect(response)
             (filename, book_image_url) = get_book_info(book_id)
-            download_txt(response, filename, directry)
-            download_image(book_image_url)
-
+            # download_txt(response, filename, directry)
+            # download_image(book_image_url)
+            comments = download_comments(book_id)
+            print(filename)
+            for comment in comments:
+                print(comment)
         except requests.exceptions.HTTPError:
             pass
