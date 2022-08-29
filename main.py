@@ -57,6 +57,20 @@ def get_book_info(id):
     (book_title, book_author) = title_text.split('::')
     return f'{id}. {book_title.strip()}.txt', urljoin('https://tululu.org', book_image)
 
+
+def get_books_genres(id):
+    url = f'https://tululu.org/b{id}/'
+    response = requests.get(url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, 'lxml')
+    genre_field = soup.find('span', class_='d_book')
+    genres_tags = genre_field.find_all('a')
+    genres_texts = []
+    for genre_tag in genres_tags:
+        genre_text = genre_tag.text
+        genres_texts.append(genre_text)
+    return genres_texts
+
         
 if __name__ == '__main__':
     directry = 'books'
@@ -70,9 +84,10 @@ if __name__ == '__main__':
             (filename, book_image_url) = get_book_info(book_id)
             # download_txt(response, filename, directry)
             # download_image(book_image_url)
-            comments = download_comments(book_id)
+            # comments = download_comments(book_id)
             print(filename)
-            for comment in comments:
-                print(comment)
+            print(get_books_genres(book_id))
+            # for comment in comments:
+            #     print(comment)
         except requests.exceptions.HTTPError:
             pass
