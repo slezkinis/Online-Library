@@ -37,10 +37,11 @@ def download_image(url, directory='images/'):
 
 def download_comments(comments, file_name, directory):
     Path(directory).mkdir(parents=True, exist_ok=True)
-    print(os.path.join(directory, file_name))
-    with open(os.path.join(directory, file_name), 'a', encoding='UTF-8') as file:
-        for comment in comments:
-            file.write(f'{comment}\n')
+    if comments:
+        file_path = os.path.join(directory, file_name)
+        with open(file_path, 'a', encoding='UTF-8') as file:
+            for comment in comments:
+                file.write(f'{comment}\n')
 
 
 def parse_book_page(soup):
@@ -69,7 +70,7 @@ def parse_book_page(soup):
     about_book['book_genres'] = genres_texts
     return about_book
 
-     
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-e',
         '--end_id',
-        help='ID книги, по которой надо скачивать', 
+        help='ID книги, по которой надо скачивать',
         default=10,
         type=int
     )
@@ -111,7 +112,7 @@ if __name__ == '__main__':
             download_image(about_book['book_image_url'])
             download_comments(
                 about_book['comments'],
-                f'{about_book["book_title"]}.txt',
+                f'{book_id}. {about_book["book_title"]}.txt',
                 'comments'
             )
             print(f'Название: {about_book["book_title"]}')
