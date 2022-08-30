@@ -33,7 +33,15 @@ def download_image(url, directory='images/'):
             file.write(response.content)
     except requests.exceptions.HTTPError:
         pass
-    
+
+
+def download_comments(comments, file_name, directory):
+    Path(directory).mkdir(parents=True, exist_ok=True)
+    print(os.path.join(directory, file_name))
+    with open(os.path.join(directory, file_name), 'a', encoding='UTF-8') as file:
+        for comment in comments:
+            file.write(f'{comment}\n')
+
 
 def parse_book_page(soup):
     about_book = {}
@@ -101,6 +109,11 @@ if __name__ == '__main__':
                 'books'
                 )
             download_image(about_book['book_image_url'])
+            download_comments(
+                about_book['comments'],
+                f'{about_book["book_title"]}.txt',
+                'comments'
+            )
             print(f'Название: {about_book["book_title"]}')
             print(f'Автор: {about_book["book_author"]}')
             print()
