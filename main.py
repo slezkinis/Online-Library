@@ -5,6 +5,7 @@ from pathvalidate import sanitize_filename
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, unquote, urlsplit
 from pprint import pprint
+import argparse
 
 
 def check_for_redirect(response):
@@ -44,9 +45,9 @@ def parse_book_page(soup):
     book_image = soup.find('div', class_='bookimage').find('img')['src']
     title_text = title_tag.text
     (book_title, book_author) = title_text.split('::')
-    about_book['book_title'] = book_title
-    about_book['book_author'] = book_author
-    about_book['book_image'] = urljoin('https://tululu.org', book_image)
+    about_book['book_title'] = book_title.strip()
+    about_book['book_author'] = book_author.strip()
+    about_book['book_image_url'] = urljoin('https://tululu.org', book_image)
 
     genre_field = soup.find('span', class_='d_book')
     genres_tags = genre_field.find_all('a')
@@ -59,25 +60,48 @@ def parse_book_page(soup):
 
      
 if __name__ == '__main__':
-    directry = 'books'
-    for book_id in range(1, 11):
+    parser = argparse.ArgumentParser(
+    description='Описание что делает программа'
+    )
+    parser.add_argument(
+        '-s',
+        '--start_id',
+        help='ID книги, с которой надо скачивать',
+        default=1,
+        type=int
+    )
+    parser.add_argument(
+        '-e',
+        '--end_id',
+        help='ID книги, по которой надо скачивать', 
+        default=10,
+        type=int
+    )
+    args = parser.parse_args()
+    for book_id in range(
+                        args.start_id,
+                        args.end_id + 1
+                        ):
         url = 'https://tululu.org/txt.php'
         params = {'id': book_id}
-        response = requests.get(url, params=params)
+        download_response = requests.get(url, params=params)
         try:
-            response.raise_for_status()
-            check_for_redirect(response)
+            download_response.raise_for_status()
+            check_for_redirect(download_response)
             url = f'https://tululu.org/b{book_id}/'
             response = requests.get(url)
             response.raise_for_status()
+            check_for_redirect(response)
             soup = BeautifulSoup(response.text, 'lxml')
             about_book = parse_book_page(soup)
-            # download_txt(response, filename, directry)
-            # download_image(book_image_url)
-            # comments = download_comments(book_id)
-            print(book_id)
-            pprint(about_book)
-            # for comment in comments:
-            #     print(comment)
+            download_txt(
+                download_response,
+                f'{book_id}. {about_book["book_title"]}.txt',
+                'books'
+                )
+            download_image(about_book['book_image_url'])
+            print(f'Название: {about_book["book_title"]}')
+            print(f'Автор: {about_book["book_author"]}')
+            print()
         except requests.exceptions.HTTPError:
             pass
