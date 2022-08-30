@@ -4,7 +4,6 @@ from pathlib import Path
 from pathvalidate import sanitize_filename
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, unquote, urlsplit
-from pprint import pprint
 import argparse
 
 
@@ -21,15 +20,19 @@ def download_txt(response, filename, folder='books/'):
 
 
 def download_image(url, directory='images/'):
-    decoded_url = unquote(url)
-    response = requests.get(decoded_url)
-    response.raise_for_status()
-    url_parts = urlsplit(decoded_url)
-    path_parts = url_parts.path.split('/')
-    filename = path_parts[-1]
-    Path(directory).mkdir(parents=True, exist_ok=True)
-    with open(os.path.join(directory, filename), 'wb') as file:
-        file.write(response.content)
+    try:
+        decoded_url = unquote(url)
+        response = requests.get(decoded_url)
+        response.raise_for_status()
+        check_for_redirect(response)
+        url_parts = urlsplit(decoded_url)
+        path_parts = url_parts.path.split('/')
+        filename = path_parts[-1]
+        Path(directory).mkdir(parents=True, exist_ok=True)
+        with open(os.path.join(directory, filename), 'wb') as file:
+            file.write(response.content)
+    except requests.exceptions.HTTPError:
+        pass
     
 
 def parse_book_page(soup):
@@ -60,9 +63,7 @@ def parse_book_page(soup):
 
      
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-    description='Описание что делает программа'
-    )
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         '-s',
         '--start_id',
