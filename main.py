@@ -42,7 +42,7 @@ def download_comments(comments, file_name, directory):
             [file.write(f'{comment}\n') for comment in comments]
 
 
-def parse_book_page(soup):
+def parse_book_page(soup, book_id):
     comments_tags = soup.find_all('div', class_='texts')
     comments_texts = [
         comment_tag.find('span', class_='black').text
@@ -57,7 +57,7 @@ def parse_book_page(soup):
     genre_field = soup.find('span', class_='d_book')
     genres_tags = genre_field.find_all('a')
     genres_texts = [genre_tag.text for genre_tag in genres_tags]
-    book_url = 'https://tululu.org/txt.php'
+    book_url = f'https://tululu.org/b{book_id}/'
     about_book = {
         'book_genres': genres_texts,
         'book_image_url': urljoin(
@@ -122,29 +122,28 @@ def main():
         while True:
             try:
                 download_response = get_download_response(book_id)
-                try:
-                    check_for_redirect(download_response)
-                    soup = get_soup(book_id)
-                    about_book = parse_book_page(soup)
-                    download_txt(
-                        download_response,
-                        f'{book_id}. {about_book["book_title"]}.txt',
-                        'books'
-                        )
-                    download_image(about_book['book_image_url'])
-                    download_comments(
-                        about_book['comments'],
-                        f'{book_id}. {about_book["book_title"]}.txt',
-                        'comments'
+                check_for_redirect(download_response)
+                soup = get_soup(book_id)
+                about_book = parse_book_page(soup, book_id)
+                download_txt(
+                    download_response,
+                    f'{book_id}. {about_book["book_title"]}.txt',
+                    'books'
                     )
-                    print_about_book(about_book)
-                    break
-                except requests.exceptions.HTTPError:
-                    logging.warning(f'Книги №{book_id} не найдена!')
-                    print()
-                    break
+                download_image(about_book['book_image_url'])
+                download_comments(
+                    about_book['comments'],
+                    f'{book_id}. {about_book["book_title"]}.txt',
+                    'comments'
+                )
+                print_about_book(about_book)
+                break
+            except requests.exceptions.HTTPError:
+                logging.warning(f'Книги №{book_id} не найдена!')
+                print()
+                break
             except requests.ConnectionError:
-                logging.warning('Нет подключения к интернету! Через 10 сек. повториться попытка')
+                logging.warning('Нет подключения к интернету! Через 10 сек. повториться попытка.')
                 print()
                 time.sleep(10)
 
