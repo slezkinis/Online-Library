@@ -5,13 +5,33 @@ from urllib.parse import urljoin
 from main import check_for_redirect, download_image, download_txt
 from os.path import join
 import json
+import argparse
 
 
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-s',
+        '--start_page',
+        help='Страница, с которой надо начинать скачивать книги',
+        default=0,
+        type=int
+    )
+    parser.add_argument(
+        '-e',
+        '--end_page',
+        help='Страница, по которую надо скачивать книги',
+        default=704,
+        type=int
+    )
+    args = parser.parse_args()
+    return args.start_page, args.end_page
 
 
 if __name__ == '__main__':
     about_books = []
-    for number_page in range(1, 2):
+    start_page, end_page = get_arguments()
+    for number_page in range(start_page, end_page):
         url = f'https://tululu.org/l55/{number_page}'
         response = requests.get(url)
         response.raise_for_status()
@@ -25,6 +45,7 @@ if __name__ == '__main__':
                     url,
                     url_part.select_one(url_selector)['href']
                 )
+                print(book_url)
                 book_id = (url_part.select_one(url_selector)['href']).replace('/', '').replace('b', '')
                 book_response = requests.get(book_url)
                 check_for_redirect(book_response)
@@ -63,12 +84,7 @@ if __name__ == '__main__':
                     'genres': genres_texts
                 }
                 about_books.append(about_book)
-                
-
             except requests.exceptions.HTTPError:
                 continue
     with open("about_books.json", "w", encoding='utf8') as my_file:
         json.dump(about_books, my_file, ensure_ascii=False)
-
-
-
