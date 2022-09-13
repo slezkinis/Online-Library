@@ -6,6 +6,7 @@ from main import check_for_redirect, download_image, download_txt
 from os.path import join
 import json
 import argparse
+from pathlib import Path
 
 
 def get_arguments():
@@ -24,13 +25,51 @@ def get_arguments():
         default=704,
         type=int
     )
+    parser.add_argument(
+        '-d',
+        '--dest_folder',
+        help='Папка с результатами',
+        default=''
+    )
+    parser.add_argument(
+        '-si',
+        '--skip_imgs',
+        help='Скачивать ли изображения',
+        default=False
+    )
+    parser.add_argument(
+        '-st',
+        '--skip_txt',
+        help='Скачивать ли книги',
+        default=False
+    )
+    parser.add_argument(
+        '-j',
+        '--json_path',
+        help='Где будет сохранён json-файл',
+        default=''
+    )
     args = parser.parse_args()
-    return args.start_page, args.end_page
+    return (
+        args.start_page,
+        args.end_page,
+        args.dest_folder,
+        args.skip_imgs,
+        args.skip_txt,
+        args.json_path
+    )
 
 
 if __name__ == '__main__':
     about_books = []
-    start_page, end_page = get_arguments()
+    (
+    start_page,
+    end_page,
+    dest_folder,
+    skip_imgs,
+    skip_txt,
+    json_path
+    ) = get_arguments()
     for number_page in range(start_page, end_page):
         url = f'https://tululu.org/l55/{number_page}'
         response = requests.get(url)
@@ -58,14 +97,18 @@ if __name__ == '__main__':
                 book_title, book_author = title_text.split('::')
                 book_title = book_title.strip()
                 
-                url = 'https://tululu.org/txt.php'
-                params = {'id': book_id}
-                download_response = requests.get(url, params=params)
-                download_response.raise_for_status()
-                file_name = f'{book_title}.txt'
-                download_txt(download_response, file_name, 'books')
-                book_path = join('books', file_name)
-                image_path = download_image(urljoin(book_url, book_image))
+                book_path = ''
+                if not skip_txt:
+                    url = 'https://tululu.org/txt.php'
+                    params = {'id': book_id}
+                    download_response = requests.get(url, params=params)
+                    download_response.raise_for_status()
+                    file_name = f'{book_title}.txt'
+                    download_txt(download_response, file_name, join(dest_folder, 'books'))
+                    book_path = join('books', file_name)
+                image_path = ''
+                if not skip_imgs:
+                    image_path = download_image(urljoin(book_url, book_image), join(dest_folder, 'images'))
                 genres_selector = 'span.d_book a'
                 genres_tags = book_soup.select(genres_selector)
                 genres_texts = [genre_tag.text for genre_tag in genres_tags]
@@ -86,5 +129,6 @@ if __name__ == '__main__':
                 about_books.append(about_book)
             except requests.exceptions.HTTPError:
                 continue
-    with open("about_books.json", "w", encoding='utf8') as my_file:
+    Path(json_path).mkdir(parents=True, exist_ok=True)
+    with open(join(json_path, 'about_books.json'), 'w', encoding='utf8') as my_file:
         json.dump(about_books, my_file, ensure_ascii=False)
