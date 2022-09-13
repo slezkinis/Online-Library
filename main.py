@@ -14,14 +14,14 @@ def check_for_redirect(response):
         raise requests.exceptions.HTTPError()
 
 
-def download_txt(response, filename, folder='books/'):
+def download_txt(response, filename, folder='books'):
     Path(folder).mkdir(parents=True, exist_ok=True)
     file_path = os.path.join(folder, sanitize_filename(filename))
     with open(file_path, 'wb') as file:
         file.write(response.content)
 
 
-def download_image(url, directory='images/'):
+def download_image(url, directory='images'):
     decoded_url = unquote(url)
     response = requests.get(decoded_url)
     response.raise_for_status()
@@ -32,6 +32,7 @@ def download_image(url, directory='images/'):
     Path(directory).mkdir(parents=True, exist_ok=True)
     with open(os.path.join(directory, filename), 'wb') as file:
         file.write(response.content)
+    return os.path.join(directory, filename)
 
 
 def download_comments(comments, file_name, directory):
