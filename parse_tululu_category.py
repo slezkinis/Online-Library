@@ -1,15 +1,21 @@
-from bs4 import BeautifulSoup
-import requests
-from urllib.parse import urljoin
-from main import check_for_redirect, download_image, download_txt
+import argparse
+import logging
 from os.path import join
 import json
-import argparse
+import time
+
+from bs4 import BeautifulSoup
 from pathlib import Path
+from urllib.parse import urljoin
+import requests
+
+from parse_tululu_book import check_for_redirect, download_image, download_txt, parse_book_page
 
 
 def get_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        'Это программа скачивает книги по страницам с сайта.'
+    )
     parser.add_argument(
         '-s',
         '--start_page',
@@ -49,85 +55,96 @@ def get_arguments():
         default=''
     )
     args = parser.parse_args()
-    return (
-        args.start_page,
-        args.end_page,
-        args.dest_folder,
-        args.skip_imgs,
-        args.skip_txt,
-        args.json_path
+    return args
+
+
+def get_url_parts(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    check_for_redirect(response)
+    soup = BeautifulSoup(response.text, 'lxml')
+    book_selector = 'body .d_book'
+    books_url_parts = soup.select(book_selector)
+    return books_url_parts
+
+
+def get_book_info(url_part, url):
+    url_selector = 'a'
+    book_url = urljoin(
+        url,
+        url_part.select_one(url_selector)['href']
     )
+    book_id = (
+        url_part.select_one(url_selector)['href']
+        .replace('/', '').replace('b', '')
+        )
+    book_response = requests.get(book_url)
+    book_response.raise_for_status()
+    check_for_redirect(book_response)
+    book_soup = BeautifulSoup(book_response.text, 'lxml')
+    return book_soup, book_id
+
+
+def main():
+    about_books = []
+    args = get_arguments()
+    for number_page in range(args.start_page, args.end_page):
+        url = f'https://tululu.org/l55/{number_page}'
+        books_url_parts = get_url_parts(url)
+        for url_part in books_url_parts:
+            while True:
+                try:
+                    book_soup, book_id = get_book_info(url_part, url)
+                    about_parse_book = parse_book_page(book_soup, book_id)
+                    book_path = ''
+                    if not args.skip_txt:
+                        url = 'https://tululu.org/txt.php'
+                        params = {'id': book_id}
+                        download_response = requests.get(url, params=params)
+                        download_response.raise_for_status()
+                        check_for_redirect(download_response)
+                        file_name = about_parse_book['book_title'] + '.txt'
+                        download_txt(
+                            download_response, file_name,
+                            join(args.dest_folder, 'books')
+                        )
+                        book_path = join('books', file_name)
+                    image_path = ''
+                    if not args.skip_imgs:
+                        image_path = download_image(
+                            about_parse_book['book_image_url'],
+                            join(args.dest_folder, 'images')
+                        )
+                    about_book = {
+                        'title': (
+                            about_parse_book['book_title']
+                            .replace(' \xa0 ', '').strip()
+                        ),
+                        'author': (
+                            about_parse_book['book_author']
+                            .replace(' \xa0 ', '')
+                        ),
+                        'img_src': image_path,
+                        'book_path': book_path,
+                        'comments': about_parse_book['comments'],
+                        'genres': about_parse_book['book_genres']
+                    }
+                    about_books.append(about_book)
+                    break
+                except requests.exceptions.HTTPError:
+                    logging.warning(f'Книги №{book_id} не существует!')
+                    break
+                except requests.ConnectionError:
+                    logging.warning('Нет подключения к интернету!')
+                    time.sleep(10)
+    Path(args.json_path).mkdir(parents=True, exist_ok=True)
+    with open(
+        join(args.json_path, 'about_books.json'),
+        'w',
+        encoding='utf8'
+    ) as file:
+        json.dump(about_books, file, ensure_ascii=False)
 
 
 if __name__ == '__main__':
-    about_books = []
-    (
-    start_page,
-    end_page,
-    dest_folder,
-    skip_imgs,
-    skip_txt,
-    json_path
-    ) = get_arguments()
-    for number_page in range(start_page, end_page):
-        url = f'https://tululu.org/l55/{number_page}'
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'lxml')
-        book_selector = 'body .d_book'
-        books_url_parts = soup.select(book_selector)
-        for url_part in books_url_parts:
-            try:
-                url_selector = 'a'
-                book_url = urljoin(
-                    url,
-                    url_part.select_one(url_selector)['href']
-                )
-                print(book_url)
-                book_id = (url_part.select_one(url_selector)['href']).replace('/', '').replace('b', '')
-                book_response = requests.get(book_url)
-                check_for_redirect(book_response)
-                book_soup = BeautifulSoup(book_response.text, 'lxml')
-                title_selector = 'h1'
-                title_tag = book_soup.select_one(title_selector)
-                img_selector = '.bookimage img'
-                book_image = book_soup.select_one(img_selector)['src']
-                title_text = title_tag.text
-                book_title, book_author = title_text.split('::')
-                book_title = book_title.strip()
-                
-                book_path = ''
-                if not skip_txt:
-                    url = 'https://tululu.org/txt.php'
-                    params = {'id': book_id}
-                    download_response = requests.get(url, params=params)
-                    download_response.raise_for_status()
-                    file_name = f'{book_title}.txt'
-                    download_txt(download_response, file_name, join(dest_folder, 'books'))
-                    book_path = join('books', file_name)
-                image_path = ''
-                if not skip_imgs:
-                    image_path = download_image(urljoin(book_url, book_image), join(dest_folder, 'images'))
-                genres_selector = 'span.d_book a'
-                genres_tags = book_soup.select(genres_selector)
-                genres_texts = [genre_tag.text for genre_tag in genres_tags]
-                comments_selector = 'div.texts span.black'
-                comments_tags = book_soup.select(comments_selector)
-                comments_texts = [
-                    comment_tag.text
-                    for comment_tag in comments_tags
-                ]
-                about_book = {
-                    'title': book_title.replace(' \xa0 ', '').strip(),
-                    'author': book_author.replace(' \xa0 ', ''),
-                    'img_src': image_path,
-                    'book_path': book_path,
-                    'comments': comments_texts,
-                    'genres': genres_texts
-                }
-                about_books.append(about_book)
-            except requests.exceptions.HTTPError:
-                continue
-    Path(json_path).mkdir(parents=True, exist_ok=True)
-    with open(join(json_path, 'about_books.json'), 'w', encoding='utf8') as my_file:
-        json.dump(about_books, my_file, ensure_ascii=False)
+    main()
