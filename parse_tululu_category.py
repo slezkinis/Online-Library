@@ -58,7 +58,7 @@ def get_arguments():
     return args
 
 
-def get_url_parts(url):
+def get_urls_soups(url):
     response = requests.get(url)
     response.raise_for_status()
     check_for_redirect(response)
@@ -68,82 +68,101 @@ def get_url_parts(url):
     return books_url_parts
 
 
-def get_book_info(url_part, url):
-    url_selector = 'a'
-    book_url = urljoin(
-        url,
-        url_part.select_one(url_selector)['href']
-    )
-    book_id = (
-        url_part.select_one(url_selector)['href']
-        .replace('/', '').replace('b', '')
-        )
+def get_book_info(book_url):
     book_response = requests.get(book_url)
     book_response.raise_for_status()
     check_for_redirect(book_response)
     book_soup = BeautifulSoup(book_response.text, 'lxml')
-    return book_soup, book_id
+    return book_soup
+
+
+def get_book_url(url, url_soup):
+    url_selector = 'a'
+    book_url = urljoin(
+        url,
+        url_soup.select_one(url_selector)['href']
+    )
+    book_id = (
+        url_soup.select_one(url_selector)['href']
+        .replace('/', '').replace('b', '')
+    )
+    return book_url, book_id
+
+
+def download_books(url_soup, args, books, url):
+    book_url, book_id = get_book_url(url, url_soup)
+    book_soup = get_book_info(book_url)
+    parse_book = parse_book_page(book_soup, book_id)
+    book_path = ''
+    if not args.skip_txt:
+        url = 'https://tululu.org/txt.php'
+        params = {'id': book_id}
+        download_response = requests.get(url, params=params)
+        download_response.raise_for_status()
+        check_for_redirect(download_response)
+        file_name = parse_book['book_title'] + '.txt'
+        download_txt(
+            download_response, file_name,
+            join(args.dest_folder, 'books')
+        )
+        book_path = join('books', file_name)
+    image_path = ''
+    if not args.skip_imgs:
+        image_path = download_image(
+            parse_book['book_image_url'],
+            join(args.dest_folder, 'images')
+        )
+    book = {
+        'title': (
+            parse_book['book_title']
+            .replace(' \xa0 ', '').strip()
+        ),
+        'author': (
+            parse_book['book_author']
+            .replace(' \xa0 ', '')
+        ),
+        'img_src': image_path,
+        'book_path': book_path,
+        'comments': parse_book['comments'],
+        'genres': parse_book['book_genres']
+    }
+    books.append(book)
+    return books
 
 
 def main():
-    about_books = []
+    books = []
     args = get_arguments()
     for number_page in range(args.start_page, args.end_page):
-        url = f'https://tululu.org/l55/{number_page}'
-        books_url_parts = get_url_parts(url)
-        for url_part in books_url_parts:
-            while True:
-                try:
-                    book_soup, book_id = get_book_info(url_part, url)
-                    about_parse_book = parse_book_page(book_soup, book_id)
-                    book_path = ''
-                    if not args.skip_txt:
-                        url = 'https://tululu.org/txt.php'
-                        params = {'id': book_id}
-                        download_response = requests.get(url, params=params)
-                        download_response.raise_for_status()
-                        check_for_redirect(download_response)
-                        file_name = about_parse_book['book_title'] + '.txt'
-                        download_txt(
-                            download_response, file_name,
-                            join(args.dest_folder, 'books')
-                        )
-                        book_path = join('books', file_name)
-                    image_path = ''
-                    if not args.skip_imgs:
-                        image_path = download_image(
-                            about_parse_book['book_image_url'],
-                            join(args.dest_folder, 'images')
-                        )
-                    about_book = {
-                        'title': (
-                            about_parse_book['book_title']
-                            .replace(' \xa0 ', '').strip()
-                        ),
-                        'author': (
-                            about_parse_book['book_author']
-                            .replace(' \xa0 ', '')
-                        ),
-                        'img_src': image_path,
-                        'book_path': book_path,
-                        'comments': about_parse_book['comments'],
-                        'genres': about_parse_book['book_genres']
-                    }
-                    about_books.append(about_book)
-                    break
-                except requests.exceptions.HTTPError:
-                    logging.warning(f'Книги №{book_id} не существует!')
-                    break
-                except requests.ConnectionError:
-                    logging.warning('Нет подключения к интернету!')
-                    time.sleep(10)
+        while True:
+            try:
+                url = f'https://tululu.org/l55/{number_page}'
+                urls_soups = get_urls_soups(url)
+                for url_soup in urls_soups:
+                    while True:
+                        try:
+                            books = download_books(url_soup, args, books, url)
+                            break
+                        except requests.HTTPError:
+                            logging.warning('Книги не существует!')
+                            break
+                        except requests.ConnectionError:
+                            logging.warning('Нет подключения к интернету!')
+                            time.sleep(10)
+                break
+            except requests.ConnectionError:
+                logging.warning('Нет подключения к интернету!')
+                time.sleep(10)
+            except requests.HTTPError:
+                logging.warning('Книги не существует!')
+                break
     Path(args.json_path).mkdir(parents=True, exist_ok=True)
     with open(
         join(args.json_path, 'about_books.json'),
         'w',
         encoding='utf8'
     ) as file:
-        json.dump(about_books, file, ensure_ascii=False)
+        json.dump(books, file, ensure_ascii=False)
 
 
 if __name__ == '__main__':
