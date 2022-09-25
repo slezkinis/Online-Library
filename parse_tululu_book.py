@@ -59,7 +59,7 @@ def parse_book_page(soup, book_id):
     genres_tags = genre_field.find_all('a')
     genres_texts = [genre_tag.text for genre_tag in genres_tags]
     book_url = f'https://tululu.org/b{book_id}/'
-    about_book = {
+    book = {
         'book_genres': genres_texts,
         'book_image_url': urljoin(
             book_url,
@@ -69,7 +69,7 @@ def parse_book_page(soup, book_id):
         'book_title': book_title.strip(),
         'comments': comments_texts
     }
-    return about_book
+    return book
 
 
 def get_arguments():
@@ -103,9 +103,9 @@ def get_soup(book_id):
     return soup
 
 
-def print_about_book(about_book):
-    print(f'Название: {about_book["book_title"]}')
-    print(f'Автор: {about_book["book_author"]}')
+def print_about_book(book):
+    print(f'Название: {book["book_title"]}')
+    print(f'Автор: {book["book_author"]}')
     print()
 
 
@@ -125,19 +125,19 @@ def main():
                 download_response = get_download_response(book_id)
                 check_for_redirect(download_response)
                 soup = get_soup(book_id)
-                about_book = parse_book_page(soup, book_id)
+                book = parse_book_page(soup, book_id)
                 download_txt(
                     download_response,
-                    f'{book_id}. {about_book["book_title"]}.txt',
+                    f'{book_id}. {book["book_title"]}.txt',
                     'books'
                     )
-                download_image(about_book['book_image_url'])
+                download_image(book['book_image_url'])
                 download_comments(
-                    about_book['comments'],
-                    f'{book_id}. {about_book["book_title"]}.txt',
+                    book['comments'],
+                    f'{book_id}. {book["book_title"]}.txt',
                     'comments'
                 )
-                print_about_book(about_book)
+                print_about_book(book)
                 break
             except requests.exceptions.HTTPError:
                 logging.warning(f'Книги №{book_id} не найдена!')
