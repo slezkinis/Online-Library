@@ -68,7 +68,7 @@ def get_urls_soups(url):
     return books_url_parts
 
 
-def get_book_info(book_url):
+def get_book_soup(book_url):
     book_response = requests.get(book_url)
     book_response.raise_for_status()
     check_for_redirect(book_response)
@@ -91,7 +91,7 @@ def get_book_url(url, url_soup):
 
 def download_books(url_soup, args, books, url):
     book_url, book_id = get_book_url(url, url_soup)
-    book_soup = get_book_info(book_url)
+    book_soup = get_book_soup(book_url)
     parse_book = parse_book_page(book_soup, book_id)
     book_path = ''
     if not args.skip_txt:
