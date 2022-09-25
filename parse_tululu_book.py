@@ -30,9 +30,10 @@ def download_image(url, directory='images'):
     path_parts = url_parts.path.split('/')
     filename = path_parts[-1]
     Path(directory).mkdir(parents=True, exist_ok=True)
-    with open(os.path.join(directory, filename), 'wb') as file:
+    book_path = os.path.join(directory, filename)
+    with open(book_path, 'wb') as file:
         file.write(response.content)
-    return os.path.join(directory, filename)
+    return book_path
 
 
 def download_comments(comments, file_name, directory):
