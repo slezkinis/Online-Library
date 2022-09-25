@@ -92,7 +92,7 @@ def get_book_url(url, url_soup):
 def download_books(url_soup, args, books, url):
     book_url, book_id = get_book_url(url, url_soup)
     book_soup = get_book_soup(book_url)
-    parse_book = parse_book_page(book_soup, book_id)
+    parsed_book = parse_book_page(book_soup, book_id)
     book_path = ''
     if not args.skip_txt:
         url = 'https://tululu.org/txt.php'
@@ -100,7 +100,7 @@ def download_books(url_soup, args, books, url):
         download_response = requests.get(url, params=params)
         download_response.raise_for_status()
         check_for_redirect(download_response)
-        file_name = f'{parse_book["book_title"]}.txt'
+        file_name = f'{parsed_book["book_title"]}.txt'
         download_txt(
             download_response, file_name,
             join(args.dest_folder, 'books')
@@ -109,22 +109,22 @@ def download_books(url_soup, args, books, url):
     image_path = ''
     if not args.skip_imgs:
         image_path = download_image(
-            parse_book['book_image_url'],
+            parsed_book['book_image_url'],
             join(args.dest_folder, 'images')
         )
     book = {
         'title': (
-            parse_book['book_title']
+            parsed_book['book_title']
             .replace(' \xa0 ', '').strip()
         ),
         'author': (
-            parse_book['book_author']
+            parsed_book['book_author']
             .replace(' \xa0 ', '')
         ),
         'img_src': image_path,
         'book_path': book_path,
-        'comments': parse_book['comments'],
-        'genres': parse_book['book_genres']
+        'comments': parsed_book['comments'],
+        'genres': parsed_book['book_genres']
     }
     update_books = [*books, book]
     return update_books
