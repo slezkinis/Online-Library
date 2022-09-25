@@ -126,8 +126,8 @@ def download_books(url_soup, args, books, url):
         'comments': parse_book['comments'],
         'genres': parse_book['book_genres']
     }
-    books.append(book)
-    return books
+    update_books = [*books, book]
+    return update_books
 
 
 def main():
