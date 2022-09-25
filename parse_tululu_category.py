@@ -100,7 +100,7 @@ def download_books(url_soup, args, books, url):
         download_response = requests.get(url, params=params)
         download_response.raise_for_status()
         check_for_redirect(download_response)
-        file_name = parse_book['book_title'] + '.txt'
+        file_name = f'{parse_book["book_title"]}.txt'
         download_txt(
             download_response, file_name,
             join(args.dest_folder, 'books')
