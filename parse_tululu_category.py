@@ -89,7 +89,7 @@ def get_book_url(url, url_soup):
     return book_url, book_id
 
 
-def download_books(url_soup, args, books, url):
+def download_book(url_soup, args, books, url):
     book_url, book_id = get_book_url(url, url_soup)
     book_soup = get_book_soup(book_url)
     parsed_book = parse_book_page(book_soup, book_id)
@@ -141,7 +141,7 @@ def main():
                 for url_soup in urls_soups:
                     while True:
                         try:
-                            books = download_books(url_soup, args, books, url)
+                            books = download_book(url_soup, args, books, url)
                             break
                         except requests.HTTPError:
                             logging.warning('Книги не существует!')
