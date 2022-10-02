@@ -141,7 +141,7 @@ def main():
                     while True:
                         try:
                             book = download_book(url_soup, args, books, url)
-                            books = [*books, book]
+                            books.append(book)
                             break
                         except requests.HTTPError:
                             logging.warning('Книги не существует!')
