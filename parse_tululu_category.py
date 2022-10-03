@@ -121,8 +121,8 @@ def download_book(url_soup, args, books, url):
             parsed_book['book_author']
             .replace(' \xa0 ', '')
         ),
-        'img_src': image_path,
-        'book_path': book_path,
+        'img_src': image_path.replace('\\', '/'),
+        'book_path': book_path.replace('\\', '/'),
         'comments': parsed_book['comments'],
         'genres': parsed_book['book_genres']
     }
