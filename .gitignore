@@ -1,7 +1,6 @@
 books/
 images/
 comments/
-pages/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
