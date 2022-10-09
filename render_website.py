@@ -36,4 +36,4 @@ server = Server()
 
 server.watch('template.html', rebuild)
 
-server.serve(root='pages')
+server.serve(root='.')
