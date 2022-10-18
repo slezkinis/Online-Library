@@ -5,3 +5,4 @@ urllib3==1.26.10
 lxml==4.9.1
 livereload==2.6.3
 more-itertools==8.14.0
+Jinja2==3.1.2
