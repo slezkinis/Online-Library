@@ -44,7 +44,7 @@ python .\render_website.py
 
 ### Сайт
 
-Как выглядит сайт можно посмотреть по этой [ссылке](https://slezkinis.github.io/Online-Library/pages/index_1.html)
+Как выглядит сайт можно посмотреть по этой [ссылке](https://slezkinis.github.io/Online-Library/pages/index_1.html).
 
 ### Цель проекта
 
