@@ -30,10 +30,14 @@ def rebuild():
         
     print("Site rebuilt")
 
-rebuild()
 
-server = Server()
+def main():
+    rebuild()
+    
+    server = Server()
+    server.watch('template.html', rebuild)
+    server.serve(root='.')
 
-server.watch('template.html', rebuild)
 
-server.serve(root='.')
+if __name__ == '__main__':
+    main()
