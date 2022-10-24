@@ -14,8 +14,7 @@ def rebuild():
         )
     template = env.get_template('template.html')
     with open('about_books.json', 'r', encoding='utf8') as file:
-        books_json = file.read()
-    books = json.loads(books_json)
+        books = json.load(file)
     pages = list(chunked(books, 10))
     pages_number = ceil(len(books) / 10)
     for page_number, page_books in enumerate(pages, start=1):
