@@ -15,10 +15,11 @@ def rebuild():
     template = env.get_template('template.html')
     with open('about_books.json', 'r', encoding='utf8') as file:
         books = json.load(file)
-    pages = list(chunked(books, 10))
-    pages_number = ceil(len(books) / 10)
+    page_length = 10
+    pages = list(chunked(books, page_length))
+    pages_number = ceil(len(books) / page_length)
     for page_number, page_books in enumerate(pages, start=1):
-        split_books = list(chunked(page_books, 10))
+        split_books = list(chunked(page_books, page_length))
         rendered_page = template.render(
             split_books=split_books, 
             pages_number=pages_number,
